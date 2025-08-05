@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Cuaca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .weather-card, .scroll-button, .day-selector {
+            transition: all 0.2s ease-in-out;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .day-selector {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen py-4 sm:py-8">
+
+    <div class="w-full max-w-5xl mx-auto p-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8">
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white text-center mb-6">Cek Cuaca Hari Ini</h1>
+            
+            <div class="flex flex-col sm:flex-row items-center gap-2 mb-6 max-w-lg mx-auto">
+                <input type="text" id="city-input" class="w-full sm:flex-grow bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-2 border-transparent focus:border-blue-500 focus:ring-0 rounded-lg px-4 py-2.5 text-sm sm:text-base" placeholder="Masukkan nama kota...">
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="search-button" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-5 py-2.5 transition-colors duration-300">
+                        <i class="ph ph-magnifying-glass text-xl"></i>
+                    </button>
+                    <button id="location-button" title="Gunakan Lokasi Saya" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg px-4 py-2.5 transition-colors duration-300">
+                        <i class="ph ph-crosshair text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="weather-container">
+                <div id="initial-message" class="hidden text-center text-gray-500 dark:text-gray-400 py-8">
+                    <i class="ph-fill ph-cloud-sun text-6xl text-blue-400 mb-4"></i>
+                    <p>Masukkan nama kota atau gunakan GPS.</p>
+                </div>
+
+                <div id="loader" class="hidden justify-center items-center py-8">
+                    <div class="loader"></div>
+                </div>
+
+                <div id="error-message" class="hidden text-center text-red-500 bg-red-100 dark:bg-red-900/20 p-4 rounded-lg max-w-md mx-auto">
+                    <i class="ph-fill ph-warning-circle text-4xl mb-2"></i>
+                    <p id="error-text"></p>
+                </div>
+
+                <div id="weather-result" class="hidden weather-card">
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-8">
+                        <div class="md:col-span-1 lg:col-span-2">
+                            <div class="text-center">
+                                <h2 id="city-name" class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white"></h2>
+                                <p id="weather-description" class="text-gray-600 dark:text-gray-300 capitalize"></p>
+                                <div class="mx-auto my-2 sm:my-4 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
+                                   <i id="weather-icon" class="text-6xl sm:text-7xl text-gray-800 dark:text-white"></i>
+                                </div>
+                                <p id="temperature" class="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white"></p>
+                            </div>
+                            <div id="current-details" class="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                                <div class="bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-lg flex items-center">
+                                    <i class="ph-fill ph-thermometer-simple text-xl sm:text-2xl text-blue-500 mr-2 sm:mr-3"></i>
+                                    <div>
+                                        <p class="text-gray-500 dark:text-gray-400">Terasa</p>
+                                        <p id="feels-like" class="font-bold text-gray-800 dark:text-white"></p>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-lg flex items-center">
+                                    <i class="ph-fill ph-drop text-xl sm:text-2xl text-sky-500 mr-2 sm:mr-3"></i>
+                                    <div>
+                                        <p class="text-gray-500 dark:text-gray-400">Lembap</p>
+                                        <p id="humidity" class="font-bold text-gray-800 dark:text-white"></p>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-lg flex items-center">
+                                   <i class="ph-fill ph-wind text-xl sm:text-2xl text-gray-500 mr-2 sm:mr-3"></i>
+                                    <div>
+                                        <p class="text-gray-500 dark:text-gray-400">Angin</p>
+                                        <p id="wind-speed" class="font-bold text-gray-800 dark:text-white"></p>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-100 dark:bg-gray-700 p-3 sm:p-4 rounded-lg flex items-center">
+                                   <i class="ph-fill ph-cloud text-xl sm:text-2xl text-slate-500 mr-2 sm:mr-3"></i>
+                                    <div>
+                                        <p class="text-gray-500 dark:text-gray-400">Awan</p>
+                                        <p id="cloud-cover" class="font-bold text-gray-800 dark:text-white"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2 lg:col-span-3 md:border-l md:border-gray-200 dark:md:border-gray-700 md:pl-8">
+                            <div class="relative">
+                                <h3 id="hourly-title" class="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3">Prakiraan Per Jam</h3>
+                                <div id="hourly-forecast-wrapper" class="relative">
+                                    <button id="scroll-left-button" class="scroll-button absolute top-1/2 -translate-y-1/2 -left-4 z-10 bg-white/80 dark:bg-gray-600/80 dark:text-white shadow-md rounded-full w-8 h-8 flex items-center justify-center opacity-0 pointer-events-none">
+                                        <i class="ph ph-caret-left"></i>
+                                    </button>
+                                    <div id="hourly-forecast-grid" class="flex overflow-x-auto pb-4 no-scrollbar">
+                                    </div>
+                                    <button id="scroll-right-button" class="scroll-button absolute top-1/2 -translate-y-1/2 -right-4 z-10 bg-white/80 dark:bg-gray-600/80 dark:text-white shadow-md rounded-full w-8 h-8 flex items-center justify-center opacity-0 pointer-events-none">
+                                        <i class="ph ph-caret-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="daily-forecast-container" class="mt-6 sm:mt-8">
+                                <h3 class="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3">Prakiraan 7 Hari</h3>
+                                <div id="daily-forecast-grid" class="space-y-2">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="clock" class="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 lg:bottom-8 lg:left-8 text-xl sm:text-2xl font-bold text-gray-500 dark:text-gray-400">
+                Memuat jam...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const geocodingApiUrl = 'https://geocoding-api.open-meteo.com/v1/search';
+        const forecastApiUrl = 'https://api.open-meteo.com/v1/forecast';
+        const reverseGeocodeApiUrl = 'https://api.bigdatacloud.net/data/reverse-geocode-client';
+
+        const cityInput = document.getElementById('city-input');
+        const searchButton = document.getElementById('search-button');
+        const locationButton = document.getElementById('location-button');
+        
+        const initialMessage = document.getElementById('initial-message');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const weatherResult = document.getElementById('weather-result');
+
+        const cityName = document.getElementById('city-name');
+        const weatherDescription = document.getElementById('weather-description');
+        const weatherIcon = document.getElementById('weather-icon');
+        const temperature = document.getElementById('temperature');
+        const currentDetails = document.getElementById('current-details');
+        const feelsLike = document.getElementById('feels-like');
+        const humidity = document.getElementById('humidity');
+        const windSpeed = document.getElementById('wind-speed');
+        const cloudCover = document.getElementById('cloud-cover');
+        const hourlyTitle = document.getElementById('hourly-title');
+        const hourlyForecastGrid = document.getElementById('hourly-forecast-grid');
+        const dailyForecastGrid = document.getElementById('daily-forecast-grid');
+        const scrollLeftButton = document.getElementById('scroll-left-button');
+        const scrollRightButton = document.getElementById('scroll-right-button');
+        const clockElement = document.getElementById('clock');
+
+        let fullWeatherData = null;
+
+        function showLoader() { hideAll(); loader.style.display = 'flex'; }
+        function showWeather() { hideAll(); weatherResult.classList.remove('hidden'); }
+        function showError(message) { hideAll(); errorText.innerHTML = message; errorMessage.style.display = 'block'; }
+        function showInitialMessage() { hideAll(); initialMessage.style.display = 'block'; initialMessage.classList.remove('hidden');}
+        function hideAll() {
+            initialMessage.classList.add('hidden');
+            loader.style.display = 'none';
+            errorMessage.style.display = 'none';
+            weatherResult.classList.add('hidden');
+        }
+
+        function getWeatherInfo(code, isDay = true) {
+            const weatherMap = {
+                0: { desc: 'Cerah', icon: isDay ? 'ph-fill ph-sun' : 'ph-fill ph-moon' },
+                1: { desc: 'Cerah Berawan', icon: isDay ? 'ph-fill ph-cloud-sun' : 'ph-fill ph-cloud-moon' },
+                2: { desc: 'Berawan', icon: 'ph-fill ph-cloud' },
+                3: { desc: 'Sangat Berawan', icon: 'ph-fill ph-clouds' },
+                45: { desc: 'Kabut', icon: 'ph-fill ph-cloud-fog' }, 48: { desc: 'Kabut Beku', icon: 'ph-fill ph-cloud-fog' },
+                51: { desc: 'Gerimis Ringan', icon: 'ph-fill ph-cloud-drizzle' }, 53: { desc: 'Gerimis Sedang', icon: 'ph-fill ph-cloud-drizzle' }, 55: { desc: 'Gerimis Lebat', icon: 'ph-fill ph-cloud-drizzle' },
+                56: { desc: 'Gerimis Beku Ringan', icon: 'ph-fill ph-cloud-snow' }, 57: { desc: 'Gerimis Beku Lebat', icon: 'ph-fill ph-cloud-snow' },
+                61: { desc: 'Hujan Ringan', icon: 'ph-fill ph-cloud-rain' }, 63: { desc: 'Hujan Sedang', icon: 'ph-fill ph-cloud-rain' }, 65: { desc: 'Hujan Lebat', icon: 'ph-fill ph-cloud-rain' },
+                66: { desc: 'Hujan Beku Ringan', icon: 'ph-fill ph-cloud-snow' }, 67: { desc: 'Hujan Beku Lebat', icon: 'ph-fill ph-cloud-snow' },
+                71: { desc: 'Salju Ringan', icon: 'ph-fill ph-cloud-snow' }, 73: { desc: 'Salju Sedang', icon: 'ph-fill ph-cloud-snow' }, 75: { desc: 'Salju Lebat', icon: 'ph-fill ph-cloud-snow' }, 77: { desc: 'Butiran Salju', icon: 'ph-fill ph-cloud-snow' },
+                80: { desc: 'Hujan Ringan', icon: 'ph-fill ph-cloud-rain' }, 81: { desc: 'Hujan Sedang', icon: 'ph-fill ph-cloud-rain' }, 82: { desc: 'Hujan Lebat', icon: 'ph-fill ph-cloud-rain' },
+                85: { desc: 'Hujan Salju Ringan', icon: 'ph-fill ph-cloud-snow' }, 86: { desc: 'Hujan Salju Lebat', icon: 'ph-fill ph-cloud-snow' },
+                95: { desc: 'Badai Petir', icon: 'ph-fill ph-cloud-lightning' }, 96: { desc: 'Badai Petir & Hujan Es', icon: 'ph-fill ph-cloud-lightning' }, 99: { desc: 'Badai Petir & Hujan Es', icon: 'ph-fill ph-cloud-lightning' },
+            };
+            return weatherMap[code] || { desc: 'Tidak Diketahui', icon: 'ph-fill ph-question' };
+        }
+
+        function getCloudCoverDescription(percentage) {
+            if (percentage <= 10) return 'Cerah';
+            if (percentage <= 50) return 'Sedikit Berawan';
+            if (percentage <= 80) return 'Berawan';
+            return 'Sangat Berawan';
+        }
+
+        async function fetchWeatherByCity(city) {
+            showLoader();
+            try {
+                const encodedCity = encodeURIComponent(city);
+                const geoResponse = await fetch(`${geocodingApiUrl}?name=${encodedCity}&count=1&language=id&format=json`);
+                const geoData = await geoResponse.json();
+                if (!geoData.results || geoData.results.length === 0) {
+                    throw new Error('Kota tidak ditemukan.<br>Coba nama kota yang lebih besar di dekatnya, atau gunakan tombol GPS.');
+                }
+                const location = geoData.results[0];
+                await fetchWeatherByCoords(location.latitude, location.longitude, location.name, location.country);
+            } catch (error) {
+                console.error('Error fetching weather by city:', error);
+                showError(error.message);
+            }
+        }
+
+        async function fetchWeatherByCoords(latitude, longitude, city = null, country = null) {
+            showLoader();
+            try {
+                const currentParams = 'current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,cloud_cover,wind_speed_10m';
+                const hourlyParams = 'hourly=temperature_2m,weather_code,is_day';
+                const dailyParams = 'daily=weather_code,temperature_2m_max,temperature_2m_min';
+                const params = `latitude=${latitude}&longitude=${longitude}&${currentParams}&${hourlyParams}&${dailyParams}&timezone=auto&forecast_days=7`;
+
+                const forecastResponse = await fetch(`${forecastApiUrl}?${params}`);
+                if (!forecastResponse.ok) throw new Error("Gagal mengambil data cuaca.");
+                fullWeatherData = await forecastResponse.json();
+
+                if (city) {
+                    fullWeatherData.displayCity = city;
+                    fullWeatherData.displayCountry = country;
+                } else {
+                    const tempCityName = fullWeatherData.timezone.split('/')[1]?.replace(/_/g, ' ') || 'Lokasi Anda';
+                    fullWeatherData.displayCity = tempCityName;
+                    fullWeatherData.displayCountry = 'Memuat...';
+                    
+                    fetch(`${reverseGeocodeApiUrl}?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`)
+                        .then(res => res.json())
+                        .then(locationData => {
+                            fullWeatherData.displayCity = locationData.city || tempCityName;
+                            fullWeatherData.displayCountry = locationData.countryName;
+                            cityName.textContent = `${fullWeatherData.displayCity}, ${fullWeatherData.displayCountry}`;
+                        });
+                }
+                displayWeatherForDay(0);
+
+            } catch (error) {
+                console.error('Error fetching weather by coords:', error);
+                showError("Tidak dapat mengambil data cuaca untuk lokasi Anda.");
+            }
+        }
+
+        function displayWeatherForDay(dayIndex) {
+            if (!fullWeatherData) return;
+            
+            updateMainDisplay(dayIndex);
+            updateHourlyForecastUI(dayIndex);
+            updateDailyForecastUI(dayIndex);
+            showWeather();
+        }
+
+        function updateMainDisplay(dayIndex) {
+            const { displayCity, displayCountry, current, daily } = fullWeatherData;
+            cityName.textContent = `${displayCity}, ${displayCountry}`;
+
+            if (dayIndex === 0) {
+                const weatherInfo = getWeatherInfo(daily.weather_code[0], current.is_day);
+                weatherDescription.textContent = weatherInfo.desc;
+                weatherIcon.className = `${weatherInfo.icon} text-6xl sm:text-7xl text-gray-800 dark:text-white`;
+                temperature.textContent = `${Math.round(current.temperature_2m)}°C`;
+                feelsLike.textContent = `${Math.round(current.apparent_temperature)}°C`;
+                humidity.textContent = `${current.relative_humidity_2m}%`;
+                windSpeed.textContent = `${current.wind_speed_10m.toFixed(1)} km/j`;
+                cloudCover.textContent = getCloudCoverDescription(current.cloud_cover);
+                currentDetails.style.display = 'grid';
+            } else {
+                const weatherInfo = getWeatherInfo(daily.weather_code[dayIndex]);
+                const maxTemp = Math.round(daily.temperature_2m_max[dayIndex]);
+                const minTemp = Math.round(daily.temperature_2m_min[dayIndex]);
+                weatherDescription.textContent = weatherInfo.desc;
+                weatherIcon.className = `${weatherInfo.icon} text-6xl sm:text-7xl text-gray-800 dark:text-white`;
+                temperature.innerHTML = `<span class="text-4xl">${maxTemp}°</span> <span class="text-3xl text-gray-400">/ ${minTemp}°</span>`;
+                currentDetails.style.display = 'none';
+            }
+        }
+
+        function updateHourlyForecastUI(dayIndex) {
+            hourlyForecastGrid.innerHTML = '';
+            const { hourly } = fullWeatherData;
+            const startIndex = dayIndex * 24;
+            const endIndex = startIndex + 24;
+            
+            const dayStr = fullWeatherData.daily.time[dayIndex];
+            hourlyTitle.textContent = `Prakiraan Per Jam - ${new Date(dayStr).toLocaleDateString('id-ID', { weekday: 'long' })}`;
+
+            for (let i = startIndex; i < endIndex && i < hourly.time.length; i++) {
+                const date = new Date(hourly.time[i]);
+                const hour = date.getHours().toString().padStart(2, '0');
+                const weatherInfo = getWeatherInfo(hourly.weather_code[i], hourly.is_day[i]);
+                const temp = Math.round(hourly.temperature_2m[i]);
+
+                const hourlyItemHTML = `
+                    <div class="flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-700 p-3 rounded-lg flex-shrink-0 mr-3 w-20 text-center">
+                        <span class="font-medium text-sm text-gray-700 dark:text-gray-300">${hour}:00</span>
+                        <i class="${weatherInfo.icon} text-2xl my-2 text-gray-600 dark:text-gray-400"></i>
+                        <span class="font-semibold text-gray-800 dark:text-white">${temp}°</span>
+                    </div>
+                `;
+                hourlyForecastGrid.innerHTML += hourlyItemHTML;
+            }
+            updateScrollButtons();
+        }
+
+        function updateDailyForecastUI(selectedDayIndex) {
+            dailyForecastGrid.innerHTML = '';
+            const { daily } = fullWeatherData;
+            daily.time.forEach((dateStr, index) => {
+                const date = new Date(dateStr);
+                const dayName = index === 0 ? 'Hari Ini' : date.toLocaleDateString('id-ID', { weekday: 'long' });
+                const weatherInfo = getWeatherInfo(daily.weather_code[index]);
+                const maxTemp = Math.round(daily.temperature_2m_max[index]);
+                const minTemp = Math.round(daily.temperature_2m_min[index]);
+                const activeClass = index === selectedDayIndex ? 'bg-blue-100 dark:bg-slate-600' : 'bg-gray-100 dark:bg-gray-700';
+
+                const dailyItemHTML = `
+                    <div class="day-selector flex items-center justify-between ${activeClass} p-3 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-slate-600" data-index="${index}">
+                        <span class="font-medium text-gray-700 dark:text-gray-300 w-1/3">${dayName}</span>
+                        <i class="${weatherInfo.icon} text-2xl text-gray-600 dark:text-gray-400"></i>
+                        <span class="font-semibold text-gray-800 dark:text-white w-1/4 text-right">${maxTemp}° / ${minTemp}°</span>
+                    </div>
+                `;
+                dailyForecastGrid.innerHTML += dailyItemHTML;
+            });
+        }
+        
+        function updateScrollButtons() {
+            const { scrollWidth, clientWidth, scrollLeft } = hourlyForecastGrid;
+            scrollRightButton.classList.toggle('opacity-0', scrollLeft >= (scrollWidth - clientWidth - 1));
+            scrollRightButton.classList.toggle('pointer-events-none', scrollLeft >= (scrollWidth - clientWidth - 1));
+            scrollLeftButton.classList.toggle('opacity-0', scrollLeft <= 0);
+            scrollLeftButton.classList.toggle('pointer-events-none', scrollLeft <= 0);
+        }
+
+        function getUserLocation() {
+            if ("geolocation" in navigator) {
+                showLoader();
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
+                    },
+                    (error) => {
+                        let msg = "Akses lokasi ditolak. Izinkan akses lokasi di pengaturan browser Anda atau cari kota secara manual.";
+                        if (error.code === error.POSITION_UNAVAILABLE) msg = "Informasi lokasi tidak tersedia.";
+                        if (error.code === error.TIMEOUT) msg = "Waktu permintaan untuk mendapatkan lokasi habis.";
+                        showError(msg);
+                        setTimeout(() => {
+                            if (!weatherResult.classList.contains('hidden')) return;
+                            showInitialMessage();
+                        }, 3000);
+                    }
+                );
+            } else {
+                showError("Geolokasi tidak didukung oleh browser Anda.");
+            }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        searchButton.addEventListener('click', () => {
+            const city = cityInput.value.trim();
+            if (city) fetchWeatherByCity(city);
+            else showError('Silakan masukkan nama kota terlebih dahulu.');
+        });
+
+        cityInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') searchButton.click();
+        });
+
+        locationButton.addEventListener('click', getUserLocation);
+
+        scrollLeftButton.addEventListener('click', () => {
+            hourlyForecastGrid.scrollBy({ left: -200, behavior: 'smooth' });
+        });
+
+        scrollRightButton.addEventListener('click', () => {
+            hourlyForecastGrid.scrollBy({ left: 200, behavior: 'smooth' });
+        });
+        
+        hourlyForecastGrid.addEventListener('scroll', updateScrollButtons);
+
+        dailyForecastGrid.addEventListener('click', (event) => {
+            const selectedDay = event.target.closest('.day-selector');
+            if (selectedDay && fullWeatherData) {
+                const dayIndex = parseInt(selectedDay.dataset.index, 10);
+                displayWeatherForDay(dayIndex);
+            }
+        });
+
+        getUserLocation();
+        setInterval(updateClock, 1000);
+        updateClock();
+
+    </script>
+</body>
+</html>
